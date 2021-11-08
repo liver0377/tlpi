@@ -1,64 +1,43 @@
-/*************************************************************************\
-*                  Copyright (C) Michael Kerrisk, 2018.                   *
-*                                                                         *
-* This program is free software. You may use, modify, and redistribute it *
-* under the terms of the GNU General Public License as published by the   *
-* Free Software Foundation, either version 3 or (at your option) any      *
-* later version. This program is distributed without any warranty.  See   *
-* the file COPYING.gpl-v3 for details.                                    *
-\*************************************************************************/
+#define _BSD_SOURCE
+#include<signal.h>
+#include<stdio.h>
+#include"../lib/tlpi_hdr.h"
 
-/* Listing 21-1 */
+void handler(int sig){
+	printf("捕获信号(%d): %s\n", sig, strsignal(sig));
+}
+int main(int argc, char **argv){
+	struct sigaction sa;
+	sigset_t fullset, emptyset;
+	siginfo_t info;
 
-#define _XOPEN_SOURCE 600
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
-#include "../lib/tlpi_hdr.h"
-#include<crypt.h>
+	if(sigemptyset(&emptyset) == -1) errExit("sigemptyset");
+	if(sigfillset(&fullset) == -1) errExit("sigfillset");
 
-static char *str2;              /* Set from argv[2] */
-static int handled = 0;         /* Counts number of calls to handler */
+	sa.sa_handler = handler;
+	sa.sa_flags = 0;
 
-static void
-handler(int sig)
-{
-    crypt(str2, "xx");
-    handled++;
+        if(sigdelset(&fullset, SIGKILL) == -1) errExit("sigdelset");
+	if(sigdelset(&fullset, SIGSTOP) == -1) errExit("sigdelset");
+	if(sigprocmask(SIG_BLOCK, &fullset, NULL) == -1) errExit("sigprocmask");
+
+	//为所有信号设置阻塞
+	for(int i = 1; i < NSIG; i++)
+		if(i != SIGKILL && i != SIGTERM)
+		if(sigaction(i, &sa, NULL) == -1)
+			errExit("sigaction");
+
+	printf("请使用kill -... %d向该进程发送各种信号\n, 有30秒钟时间", getpid());
+	sleep(30);
+
+	printf("解除阻塞");
+	
+	for(;;){
+		if(sigwaitinfo(&fullset, &info) == -1) errExit("sigwaitinfo");
+		sleep(1);
+	}
+
+	return 0;
+
 }
 
-int
-main(int argc, char *argv[])
-{
-    char *cr1;
-    int callNum, mismatch;
-    struct sigaction sa;
-
-    if (argc != 3)
-        usageErr("%s str1 str2\n", argv[0]);
-
-    str2 = argv[2];                      /* Make argv[2] available to handler */
-    cr1 = strdup(crypt(argv[1], "xx"));  /* Copy statically allocated string
-                                            to another buffer */
-    if (cr1 == NULL)
-        errExit("strdup");
-
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sa.sa_handler = handler;
-    if (sigaction(SIGINT, &sa, NULL) == -1)
-        errExit("sigaction");
-
-    /* Repeatedly call crypt() using argv[1]. If interrupted by a
-       signal handler, then the static storage returned by crypt()
-       will be overwritten by the results of encrypting argv[2], and
-       strcmp() will detect a mismatch with the value in 'cr1'. */
-
-    for (callNum = 1, mismatch = 0; ; callNum++) {
-        if (strcmp(crypt(argv[1], "xx"), cr1) != 0) {
-            mismatch++;
-            printf("Mismatch on call %d (mismatch=%d handled=%d)\n",
-                    callNum, mismatch, handled);
-        }
-    }
-}
