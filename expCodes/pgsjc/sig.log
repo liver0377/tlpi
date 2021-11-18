@@ -1,0 +1,8 @@
+PID of parent process is:       149
+Foreground process group ID is: 149
+PID=171 PGID=171
+PID=172 PGID=149
+PID=149 PGID=149
+PID=173 PGID=149
+PID 172: caught signal  1 (Hangup)
+PID 173: caught signal  1 (Hangup)
