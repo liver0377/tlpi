@@ -13,7 +13,7 @@
 #ifndef BINARY_SEMS_H           /* Prevent accidental double inclusion */
 #define BINARY_SEMS_H
 
-#include "tlpi_hdr.h"
+#include "../lib/tlpi_hdr.h"
 
 /* Variables controlling operation of functions below */
 

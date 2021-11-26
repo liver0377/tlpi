@@ -8,19 +8,21 @@
 * See the files COPYING.lgpl-v3 and COPYING.gpl-v3 for details.           *
 \*************************************************************************/
 
-/* Solution for Exercise 47-5:b */
+/* Listing 47-2 */
 
-#ifndef EVENT_FLAGS_H
-#define EVENT_FLAGS_H           /* Prevent accidental double inclusion */
+#ifndef SEMUN_H
+#define SEMUN_H                 /* Prevent accidental double inclusion */
 
-#include "tlpi_hdr.h"
+#include <sys/types.h>          /* For portability */
+#include <sys/sem.h>
 
-int waitForEventFlag(int semId, int semNum);
-
-int clearEventFlag(int semId, int semNum);
-
-int setEventFlag(int semId, int semNum);
-
-int getFlagState(int semId, int semNum, Boolean *isSet);
+union semun {                   /* Used in calls to semctl() */
+    int                 val;
+    struct semid_ds *   buf;
+    unsigned short *    array;
+#if defined(__linux__)
+    struct seminfo *    __buf;
+#endif
+};
 
 #endif
